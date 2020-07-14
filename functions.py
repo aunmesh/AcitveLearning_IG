@@ -14,6 +14,9 @@ def margin(output, image_index, batch_size):
     sorting, indices = torch.sort(output, descending=True)    
     image_index = image_index.cpu().numpy()
     for batch_number in range(batch_size): 
-        margin[ind] = sorting[0][batch_number].detach().cpu().numpy()- sorting[1][batch_number].detach().cpu().numpy()        
+        margin[ind] = sorting[0][batch_number].detach().cpu().numpy()- sorting[1][batch_number].detach().cpu().numpy()  
+        
+
+
 
        
