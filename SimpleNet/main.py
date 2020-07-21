@@ -237,6 +237,9 @@ def main():
       #indices of the data points(w.r.t to the original indexing from 1 to 50000) in the 
       #unlabelled dataset
       curr_al_step = al_step
+      #Resetting the learning rate scheduler
+      scheduler = lr_scheduler.MultiStepLR(optimizer, milestones, gamma=0.1)
+
       scores_unlabelled = score(unlabelled_dset, net, criterion)
       indices_sorted = np.argsort(scores_unlabelled)
 
@@ -516,53 +519,53 @@ def score(sub_set, net, criterion, k = 10):
   b_size = 32
   #count = 0
   while(i<len(req_indices)):
-    #print(count)
-    #count+=1
-    if( i+b_size< len(req_indices) ):
-      high = i + b_size
-    else:
-      high = len(req_indices)
+  	#print(count)
+  	#count+=1
+  	if( i+b_size< len(req_indices) ):
+  		high = i + b_size
+  	else:
+  	 	high = len(req_indices)
 
-    curr_indices = req_indices[i:high]
-    curr_images = data[curr_indices,:,:,:].to(device='cuda', dtype=torch.float)
-    curr_images = torch.autograd.Variable(curr_images, requires_grad=True)
+  	curr_indices = req_indices[i:high]
+  	curr_images = data[curr_indices,:,:,:].to(device='cuda', dtype=torch.float)
+  	curr_images = torch.autograd.Variable(curr_images, requires_grad=True)
 
-    logits = net(curr_images)
+  	logits = net(curr_images)
 
-    conf = torch.softmax(logits, 1, torch.float)
-    conf_sorted, indices_sorted = torch.sort(conf)
+  	conf = torch.softmax(logits, 1, torch.float)
+  	conf_sorted, indices_sorted = torch.sort(conf)
     
-    conf_sorted_k = conf_sorted[:, -1*k:]    #Taking the top k
-    indices_k = indices_sorted[:, -1*k:]       #Taking the top k
+  	conf_sorted_k = conf_sorted[:, -1*k:]    #Taking the top k
+  	indices_k = indices_sorted[:, -1*k:]       #Taking the top k
 
-    grad_scores = []
+  	grad_scores = []
 
     # Calculating grad scores for each class
-    for count in range(k):
-        targets = indices_k[:,count]
-        loss = criterion(logits, targets)
-        #loss.backward(retain_graph=True)
+  	for count in range(k):
+  	  	targets = indices_k[:,count]
+  	  	loss = criterion(logits, targets)
+  	  	#loss.backward(retain_graph=True)
 
-        #temp_input_grad = torch.autograd.grad(loss, curr_images,retain_graph = True, allow_unused=True)[0]
-        
-        if( count < k-1):
-          loss.backward(retain_graph=True)
-        else:
-          loss.backward()
-        
-        temp_scores = torch.sum(torch.abs(curr_images.grad), axis=(1,2,3))
-        del curr_images.grad
-        grad_scores.append(temp_scores)
+  	  	#temp_input_grad = torch.autograd.grad(loss, curr_images,retain_graph = True, allow_unused=True)[0]
+  	  	
+  	  	if( count < k-1):
+  	  		loss.backward(retain_graph=True)
+  	  	else:
+  	  		loss.backward()
+  	  	
+  	  	temp_scores = torch.sum(torch.abs(curr_images.grad), axis=(1,2,3))
+  	  	del curr_images.grad
+  	  	grad_scores.append(temp_scores)
     
-    grad_scores = torch.stack(grad_scores)
-    grad_scores = torch.transpose(grad_scores, 0,1)
+  	grad_scores = torch.stack(grad_scores)
+  	grad_scores = torch.transpose(grad_scores, 0,1)
 
-    temp_score_final = torch.sum(grad_scores * conf_sorted, axis=1)
+  	temp_score_final = torch.sum(grad_scores * conf_sorted, axis=1)
     
-    scores.append(temp_score_final)
-    #del curr_images
-    torch.cuda.empty_cache()
-    i=high
+  	scores.append(temp_score_final)
+  	#del curr_images
+  	torch.cuda.empty_cache()
+  	i=high
   
   scores = np.asarray(torch.cat(scores).cpu().detach()).tolist()
   return scores
