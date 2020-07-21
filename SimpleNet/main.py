@@ -229,8 +229,8 @@ def main():
   curr_al_step = 0
   dump_data = []
 
-  for (al_step, epoch) in [(a,b) for a in range(args.start_epoch, args.epochs) for b in range(al_steps)]:
-    
+  for (al_step, epoch) in [(a,b) for b in range(al_steps) for a in range(args.start_epoch, args.epochs) ]:
+    print(" Current AL_step and epoch " + str((al_step, epoch)) )
     if(al_step!=curr_al_step):
       
       #These return scores of datapoints in unlabelled dataset according to their indices
@@ -503,8 +503,8 @@ k is the top k predictions to be used for estimating gradient
 '''
 def score(sub_set, net, criterion, k = 10):
 
+  print("In Scoring Step")
   req_indices = np.asarray(list(sub_set.indices))
-  print(type(req_indices))
   data = torch.tensor(sub_set.dataset.data)
   data = data.permute(0,3,1,2)   #Converting to NCHW
   #targets = sub_set.dataset.targets.to(device='cuda')
@@ -516,7 +516,6 @@ def score(sub_set, net, criterion, k = 10):
   b_size = 32
   #count = 0
   while(i<len(req_indices)):
-  	print(i)
   	#print(count)
   	#count+=1
   	if( i+b_size< len(req_indices) ):
@@ -544,20 +543,15 @@ def score(sub_set, net, criterion, k = 10):
   	  	loss = criterion(logits, targets)
   	  	#loss.backward(retain_graph=True)
 
-  	  	if( count < k-1):
-  	  		temp_input_grad = torch.autograd.grad(loss, curr_images,retain_graph = True, allow_unused=True)[0]
-  	  	else:
-  	  		temp_input_grad = torch.autograd.grad(loss, curr_images,retain_graph = False, allow_unused=True)[0]
-
-
-  	  	'''
+  	  	#temp_input_grad = torch.autograd.grad(loss, curr_images,retain_graph = True, allow_unused=True)[0]
+  	  	
   	  	if( count < k-1):
   	  		loss.backward(retain_graph=True)
   	  	else:
   	  		loss.backward()
-  	  	'''
-  	  	temp_scores = torch.sum(torch.abs(temp_input_grad), axis=(1,2,3))
-  	  	del temp_input_grad
+  	  	
+  	  	temp_scores = torch.sum(torch.abs(curr_images.grad), axis=(1,2,3))
+  	  	del curr_images.grad
   	  	grad_scores.append(temp_scores)
     
   	grad_scores = torch.stack(grad_scores)
